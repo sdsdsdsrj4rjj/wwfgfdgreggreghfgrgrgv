@@ -1,0 +1,82 @@
+name: Build HyperMania ARM64
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container: debian:bullseye
+
+    steps:
+      - name: Checkout build repo
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          printf '%s\n' \
+            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260610T000000Z/ bullseye main' \
+            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260610T000000Z/ bullseye-updates main' \
+            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260610T000000Z/ bullseye-security main' \
+            > /etc/apt/sources.list
+          printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99no-check-valid-until
+          apt-get update
+          apt-get install -y build-essential cmake git ca-certificates file zip
+
+      - name: Clone HyperMania
+        run: |
+          git clone --recursive --depth 1 https://github.com/tariq-nasheed/HyperMania.git HyperMania
+
+      - name: Fix upstream CMake typo
+        working-directory: HyperMania
+        run: |
+          sed -i '/^set_target_properties(hypermania PROPERTIES PREFIX "")$/{
+            n
+            /^endif()$/d
+          }' CMakeLists.txt
+
+      - name: Configure ARM64 build
+        working-directory: HyperMania
+        run: |
+          cmake -S . -B build \
+            -DRELEASE=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS_RELEASE="-O2 -DNDEBUG"
+
+      - name: Build
+        working-directory: HyperMania
+        run: |
+          cmake --build build --config Release --parallel
+
+      - name: Verify ARM64 module
+        working-directory: HyperMania
+        run: |
+          file build/hypermania.so
+          readelf -h build/hypermania.so | grep -E 'Class:|Machine:'
+          test -f build/hypermania.so
+          test -f mod.ini
+          test -d Data
+
+      - name: Package mod
+        run: |
+          rm -rf release
+          mkdir -p release/HyperMania
+          cp HyperMania/mod.ini release/HyperMania/mod.ini
+          cp HyperMania/build/hypermania.so release/HyperMania/hypermania.so
+          cp -r HyperMania/Data release/HyperMania/Data
+          cp HyperMania/MANUAL.md release/HyperMania/MANUAL.md
+          printf '%s\n' \
+            'ARM64 Linux build for Anbernic/PortMaster' \
+            'Built from https://github.com/tariq-nasheed/HyperMania' \
+            'Upstream HyperMania build patched only for the stray CMake endif()' \
+            > release/HyperMania/BUILD_INFO.txt
+          cd release
+          zip -r ../HyperMania-Anbernic-ARM64.zip HyperMania
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: HyperMania-Anbernic-ARM64
+          path: HyperMania-Anbernic-ARM64.zip

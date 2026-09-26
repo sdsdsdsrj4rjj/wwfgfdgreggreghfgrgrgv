@@ -42,6 +42,7 @@ jobs:
         run: |
           cmake -S . -B build \
             -DRELEASE=ON \
+            -DSHCLOGO=ON \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_FLAGS="-DRETRO_MOD_LOADER_VER=2" \
             -DCMAKE_CXX_FLAGS="-DRETRO_MOD_LOADER_VER=2" \
@@ -56,8 +57,11 @@ jobs:
         working-directory: HyperMania
         run: |
           file build/hypermania.so
+          file build/SHCLogo.so
           readelf -h build/hypermania.so | grep -E 'Class:|Machine:'
+          readelf -h build/SHCLogo.so | grep -E 'Class:|Machine:'
           test -f build/hypermania.so
+          test -f build/SHCLogo.so
           test -f mod.ini
           test -d Data
 
@@ -67,12 +71,13 @@ jobs:
           mkdir -p release/HyperMania
           cp HyperMania/mod.ini release/HyperMania/mod.ini
           cp HyperMania/build/hypermania.so release/HyperMania/hypermania.so
+          cp HyperMania/build/SHCLogo.so release/HyperMania/SHCLogo.so
           cp -r HyperMania/Data release/HyperMania/Data
           cp HyperMania/MANUAL.md release/HyperMania/MANUAL.md
           printf '%s\n' \
             'ARM64 Linux build for Anbernic/PortMaster' \
             'Built from https://github.com/tariq-nasheed/HyperMania' \
-            'Upstream HyperMania build patched only for the stray CMake endif()' \
+            'Built HyperMania and SHCLogo for ARM64' \
             > release/HyperMania/BUILD_INFO.txt
           cd release
           zip -r ../HyperMania-Anbernic-ARM64.zip HyperMania

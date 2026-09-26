@@ -15,10 +15,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          printf '%s\\n' \\
-            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260610T000000Z/ bullseye main' \\
-            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260610T000000Z/ bullseye-updates main' \\
-            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260610T000000Z/ bullseye-security main' \\
+          printf '%s\n' \
+            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260610T000000Z/ bullseye main' \
+            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260610T000000Z/ bullseye-updates main' \
+            'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260610T000000Z/ bullseye-security main' \
             > /etc/apt/sources.list
           printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99no-check-valid-until
           apt-get update

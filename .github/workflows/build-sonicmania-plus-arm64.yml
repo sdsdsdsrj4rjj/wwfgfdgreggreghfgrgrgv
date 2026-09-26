@@ -1,0 +1,59 @@
+name: Build Sonic Mania Plus ARM64
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout build repo
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libglew-dev libglfw3-dev libtheora-dev libdrm-dev libgbm-dev git
+
+      - name: Clone Sonic Mania decompilation with submodules
+        run: |
+          git clone --recursive --depth 1 https://github.com/RSDKModding/Sonic-Mania-Decompilation.git Sonic-Mania-Decompilation
+
+      - name: Configure Plus ARM64 build
+        working-directory: Sonic-Mania-Decompilation
+        run: |
+          cmake -B build             -DRETRO_REVISION=2             -DRETRO_DISABLE_PLUS=off             -DRETRO_SUBSYSTEM=SDL2             -DCMAKE_BUILD_TYPE=Release             -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG"             -DCMAKE_C_FLAGS_RELEASE="-O3 -DNDEBUG"
+
+      - name: Build
+        working-directory: Sonic-Mania-Decompilation
+        run: |
+          cmake --build build --config release --parallel
+
+      - name: Verify ARM64 binaries
+        working-directory: Sonic-Mania-Decompilation
+        run: |
+          file build/libGame.so
+          file build/dependencies/RSDKv5/RSDKv5
+          readelf -h build/libGame.so | grep -E 'Class:|Machine:'
+          readelf -h build/dependencies/RSDKv5/RSDKv5 | grep -E 'Class:|Machine:'
+          test -f build/libGame.so
+          test -f build/dependencies/RSDKv5/RSDKv5
+
+      - name: Prepare PortMaster files
+        run: |
+          mkdir -p release/sonicmania-plus-arm64
+          cp Sonic-Mania-Decompilation/build/libGame.so release/sonicmania-plus-arm64/Game.so
+          cp Sonic-Mania-Decompilation/build/dependencies/RSDKv5/RSDKv5 release/sonicmania-plus-arm64/sonicmania
+          chmod +x release/sonicmania-plus-arm64/sonicmania
+          tar -C release -czf sonicmania-plus-arm64.tar.gz sonicmania-plus-arm64
+
+      - name: Upload ARM64 build
+        uses: actions/upload-artifact@v6
+        with:
+          name: sonicmania-plus-arm64
+          path: |
+            release/sonicmania-plus-arm64.tar.gz
+            release/sonicmania-plus-arm64/Game.so
+            release/sonicmania-plus-arm64/sonicmania

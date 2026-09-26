@@ -1,4 +1,4 @@
-name: Build HyperMania ARM64
+name: Build SHC2023 HyperMania ARM64
 
 on:
   push:
@@ -25,65 +25,61 @@ jobs:
           apt-get update
           apt-get install -y build-essential cmake git ca-certificates file zip
 
-      - name: Clone HyperMania
+      - name: Clone exact SHC2023 HyperMania source
         run: |
-          git clone --recursive --depth 1 https://github.com/tariq-nasheed/HyperMania.git HyperMania
+          git clone https://github.com/tariq-nasheed/HyperMania.git HyperMania
+          cd HyperMania
+          git checkout 70ec09f17a40ee552a133546834d522aadd368c5
+          git submodule update --init --recursive
 
-      - name: Fix upstream CMake typo
-        working-directory: HyperMania
-        run: |
-          sed -i '/^set_target_properties(hypermania PROPERTIES PREFIX "")$/{
-            n
-            /^endif()$/d
-          }' CMakeLists.txt
-
-      - name: Configure ARM64 build
+      - name: Build HyperMania ARM64
         working-directory: HyperMania
         run: |
           cmake -S . -B build \
-            -DRELEASE=ON \
-            -DSHCLOGO=ON \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_FLAGS="-DRETRO_REVISION=2 -DRETRO_MOD_LOADER_VER=2 -DGAME_VERSION=6 -DGAME_TYPE=1" \
-            -DCMAKE_CXX_FLAGS="-DRETRO_REVISION=2 -DRETRO_MOD_LOADER_VER=2 -DGAME_VERSION=6 -DGAME_TYPE=1" \
-            -DCMAKE_C_FLAGS_RELEASE="-O2 -DNDEBUG"
-
-      - name: Build
-        working-directory: HyperMania
-        run: |
+            -DCMAKE_C_FLAGS="-O2 -DNDEBUG -DRETRO_REVISION=2 -DRETRO_MOD_LOADER_VER=2" \
+            -DCMAKE_CXX_FLAGS="-O2 -DNDEBUG -DRETRO_REVISION=2 -DRETRO_MOD_LOADER_VER=2"
           cmake --build build --config Release --parallel
 
-      - name: Verify ARM64 module
-        working-directory: HyperMania
+      - name: Build matching SHCLogo ARM64
+        working-directory: HyperMania/src/SHCLogo-RSDKv5Decomp
         run: |
-          file build/hypermania.so
-          file build/SHCLogo.so
-          readelf -h build/hypermania.so | grep -E 'Class:|Machine:'
-          readelf -h build/SHCLogo.so | grep -E 'Class:|Machine:'
-          test -f build/hypermania.so
-          test -f build/SHCLogo.so
-          test -f mod.ini
-          test -d Data
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-O2 -DNDEBUG -DRETRO_REVISION=2 -DRETRO_MOD_LOADER_VER=2" \
+            -DCMAKE_CXX_FLAGS="-O2 -DNDEBUG -DRETRO_REVISION=2 -DRETRO_MOD_LOADER_VER=2"
+          cmake --build build --config Release --parallel
 
-      - name: Package mod
+      - name: Verify ARM64 modules
+        run: |
+          file HyperMania/build/hypermania.so
+          file HyperMania/src/SHCLogo-RSDKv5Decomp/build/SHCLogo.so
+          readelf -h HyperMania/build/hypermania.so | grep -E 'Class:|Machine:'
+          readelf -h HyperMania/src/SHCLogo-RSDKv5Decomp/build/SHCLogo.so | grep -E 'Class:|Machine:'
+          test -f HyperMania/build/hypermania.so
+          test -f HyperMania/src/SHCLogo-RSDKv5Decomp/build/SHCLogo.so
+          test -f HyperMania/mod.ini
+          test -d HyperMania/Data
+
+      - name: Package exact SHC2023 mod
         run: |
           rm -rf release
           mkdir -p release/HyperMania
           cp HyperMania/mod.ini release/HyperMania/mod.ini
           cp HyperMania/build/hypermania.so release/HyperMania/hypermania.so
-          cp HyperMania/build/SHCLogo.so release/HyperMania/SHCLogo.so
+          cp HyperMania/src/SHCLogo-RSDKv5Decomp/build/SHCLogo.so release/HyperMania/SHCLogo.so
           cp -r HyperMania/Data release/HyperMania/Data
           cp HyperMania/MANUAL.md release/HyperMania/MANUAL.md
           printf '%s\n' \
-            'ARM64 Linux build for Anbernic/PortMaster' \
-            'Built from https://github.com/tariq-nasheed/HyperMania' \
-            'Built HyperMania and SHCLogo for ARM64' \
+            'ARM64 Linux build of the SHC2023 HyperMania source snapshot' \
+            'Source commit: 70ec09f17a40ee552a133546834d522aadd368c5' \
+            'Built for the Sonic Mania decomp ARM64 revision-2 environment' \
             > release/HyperMania/BUILD_INFO.txt
           cd release
-          zip -r ../HyperMania-Anbernic-ARM64.zip HyperMania
+          zip -r ../HyperMania-SHC2023-Anbernic-ARM64.zip HyperMania
 
-      - name: Upload artifact
+      - name: Upload exact SHC2023 artifact
         uses: actions/upload-artifact@v6
         with:
-          name: HyperMania-Anbernic-ARM64
-          path: HyperMania-Anbernic-ARM64.zip
+          name: HyperMania-SHC2023-Anbernic-ARM64
+          path: HyperMania-SHC2023-Anbernic-ARM64.zip

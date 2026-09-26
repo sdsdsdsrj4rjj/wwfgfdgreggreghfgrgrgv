@@ -18,7 +18,6 @@ jobs:
           printf '%s\n' \
             'deb http://archive.debian.org/debian bullseye main' \
             'deb http://archive.debian.org/debian bullseye-updates main' \
-            'deb http://archive.debian.org/debian-security bullseye-security main' \
             > /etc/apt/sources.list
           printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99no-check-valid-until
           apt-get update
